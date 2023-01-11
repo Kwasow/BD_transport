@@ -26,12 +26,12 @@ export async function databaseInit() {
     await connection.execute(
       `CREATE TABLE Autobus (
         nr_pojazdu INT PRIMARY KEY,
-        przewoznik VARCHAR(100) NOT NULL,
-        zajezdnia VARCHAR(100) NOT NULL,
-        producent VARCHAR(100) NOT NULL,
-        model VARCHAR(100) NOT NULL,
+        przewoznik VARCHAR(60) NOT NULL,
+        zajezdnia VARCHAR(60) NOT NULL,
+        producent VARCHAR(60) NOT NULL,
+        model VARCHAR(60) NOT NULL,
         rok_produkcji INT NOT NULL,
-        nr_rejestracyjny VARCHAR(7) NOT NULL,
+        nr_rejestracyjny VARCHAR(8) NOT NULL,
         niska_podloga NUMBER(1) NOT NULL,
         zapowiadanie_przystankow NUMBER(1) NOT NULL,
         tablice_elektroniczne NUMBER(1) NOT NULL,
@@ -101,9 +101,7 @@ export async function databaseInsertOrUpdateBuses(buses: Bus[]) {
   let connection: oracledb.Connection
 
   try {
-    console.log('here1')
     connection = await databaseConnect()
-    console.log('here2')
 
     buses.forEach((bus, index) => {
       connection.execute(
@@ -133,14 +131,14 @@ export async function databaseInsertOrUpdateBuses(buses: Bus[]) {
                 model                    = '${bus.model}',
                 rok_produkcji            = ${bus.year},
                 nr_rejestracyjny         = '${bus.registration}',
-                niska_podloga            = ${bus.lowBed},
-                zapowiadanie_przystankow = ${bus.sound},
-                tablice_elektroniczne    = ${bus.lcdPanels},
-                cieple_guziki            = ${bus.doorButtons},
-                monitoring               = ${bus.cctv},
-                biletomat                = ${bus.tickets},
-                klimatyzacja             = ${bus.climateControl}
-            WHERE id = 1;
+                niska_podloga            = ${boolToInt(bus.lowBed)},
+                zapowiadanie_przystankow = ${boolToInt(bus.sound)},
+                tablice_elektroniczne    = ${boolToInt(bus.lcdPanels)},
+                cieple_guziki            = ${boolToInt(bus.doorButtons)},
+                monitoring               = ${boolToInt(bus.cctv)},
+                biletomat                = ${boolToInt(bus.tickets)},
+                klimatyzacja             = ${boolToInt(bus.climateControl)}
+            WHERE nr_pojazdu = ${bus.id};
         END;`
       )
 
@@ -151,7 +149,8 @@ export async function databaseInsertOrUpdateBuses(buses: Bus[]) {
   } finally {
     if (connection) {
       try {
-        connection.close()
+        await connection.commit()
+        await connection.close()
       } catch (err) {
         console.error(err)
       }
