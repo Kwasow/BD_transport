@@ -1,6 +1,6 @@
 import cheerio from "cheerio"
 import rp from "request-promise"
-import { databaseInsertOrUpdateBuses } from "./databaseConnection"
+import { databaseInsertOrUpdateBus } from "./databaseConnection"
 
 const apiKey = "7ee8dab5-1fa9-4baa-bc9a-44e053b87edf"
 const requestURL = "https://api.um.warszawa.pl/api/action/busestrams_get/?resource_id=f2e5503e-927d-4ad3-9500-4ab9e55deb59&limit=5&apikey="
@@ -116,40 +116,27 @@ async function getBus(url): Promise<Bus> {
   })
 }
 
-const timer = (ms) => new Promise( res => setTimeout(res, ms))
-
-async function getBuses() : Promise<Bus[]> {
-  return new Promise((resolve, reject) => {
-    getBusLinks()
-      .then((result) => {
-        const requests = result.map((link, i) => {
-          return timer(i * 1000)
-            .then(() => {
-              return getBus(link)
-                .then((bus) => {
-                  console.log("Got bus: ", i)
-                  return bus;
-              })
-            })
-        })
-
-        Promise.all(requests)
-          .then((buses) => resolve(buses))
-          .catch((err) => reject(err))
-      })
-      .catch((err) => reject(err))
-  })
-}
+const timer = (ms) => new Promise(res => setTimeout(res, ms))
 
 export async function updateBuses() {  
-  getBuses()
-    .then((res) => {
-      databaseInsertOrUpdateBuses(res)
-    })
-    .catch((err) => {
-      console.error("Error getting buses")
-      console.error(err)
-    })
+  const links = await getBusLinks()
+
+  let errorCount = 0;
+  
+  for (let i = 780; i < links.length; i++) {
+    try {
+      await timer(500)
+      const bus = await getBus(links[i])
+      console.log("Got bus: ", bus.id)
+      await databaseInsertOrUpdateBus(bus)
+      console.log("Inserted bus: ", bus.id)
+    } catch {
+      console.error('Error getting bus')
+      errorCount++
+    }
+  }
+
+  console.error('Failed to get', errorCount, 'buses')
 }
 
 export function updatePositions() {

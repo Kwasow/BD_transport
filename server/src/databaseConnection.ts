@@ -1,4 +1,4 @@
-import oracledb, { Result } from 'oracledb'
+import oracledb, { connectionClass, Result } from 'oracledb'
 import { oraclePassword } from './secrets'
 import { Bus } from './updater'
 
@@ -31,7 +31,7 @@ export async function databaseInit() {
         producent VARCHAR(60) NOT NULL,
         model VARCHAR(60) NOT NULL,
         rok_produkcji INT NOT NULL,
-        nr_rejestracyjny VARCHAR(8) NOT NULL,
+        nr_rejestracyjny VARCHAR(10) NOT NULL,
         niska_podloga NUMBER(1) NOT NULL,
         zapowiadanie_przystankow NUMBER(1) NOT NULL,
         tablice_elektroniczne NUMBER(1) NOT NULL,
@@ -97,65 +97,60 @@ function boolToInt(bool: Boolean): number {
   return bool ? 1 : 0
 }
 
-export async function databaseInsertOrUpdateBuses(buses: Bus[]) {
+export async function databaseInsertOrUpdateBus(bus: Bus) {
   let connection: oracledb.Connection
 
   try {
     connection = await databaseConnect()
 
-    buses.forEach((bus, index) => {
-      connection.execute(
-        `BEGIN
-          INSERT INTO Autobus VALUES (
-            ${bus.id},
-            '${bus.owner}',
-            '${bus.depot}',
-            '${bus.manufacturer}',
-            '${bus.model}',
-            ${bus.year},
-            '${bus.registration}',
-            ${boolToInt(bus.lowBed)},
-            ${boolToInt(bus.sound)},
-            ${boolToInt(bus.lcdPanels)},
-            ${boolToInt(bus.doorButtons)},
-            ${boolToInt(bus.cctv)},
-            ${boolToInt(bus.tickets)},
-            ${boolToInt(bus.climateControl)}
-          );
-        EXCEPTION
-          WHEN DUP_VAL_ON_INDEX THEN
-            UPDATE Autobus
-            SET przewoznik               = '${bus.owner}',
-                zajezdnia                = '${bus.depot}',
-                producent                = '${bus.manufacturer}',
-                model                    = '${bus.model}',
-                rok_produkcji            = ${bus.year},
-                nr_rejestracyjny         = '${bus.registration}',
-                niska_podloga            = ${boolToInt(bus.lowBed)},
-                zapowiadanie_przystankow = ${boolToInt(bus.sound)},
-                tablice_elektroniczne    = ${boolToInt(bus.lcdPanels)},
-                cieple_guziki            = ${boolToInt(bus.doorButtons)},
-                monitoring               = ${boolToInt(bus.cctv)},
-                biletomat                = ${boolToInt(bus.tickets)},
-                klimatyzacja             = ${boolToInt(bus.climateControl)}
-            WHERE nr_pojazdu = ${bus.id};
-        END;`
-      )
+    await connection.execute(
+      `BEGIN
+        INSERT INTO Autobus VALUES (
+          ${bus.id},
+          '${bus.owner}',
+          '${bus.depot}',
+          '${bus.manufacturer}',
+          '${bus.model}',
+          ${bus.year},
+          '${bus.registration}',
+          ${boolToInt(bus.lowBed)},
+          ${boolToInt(bus.sound)},
+          ${boolToInt(bus.lcdPanels)},
+          ${boolToInt(bus.doorButtons)},
+          ${boolToInt(bus.cctv)},
+          ${boolToInt(bus.tickets)},
+          ${boolToInt(bus.climateControl)}
+        );
+      EXCEPTION
+        WHEN DUP_VAL_ON_INDEX THEN
+          UPDATE Autobus
+          SET przewoznik               = '${bus.owner}',
+              zajezdnia                = '${bus.depot}',
+              producent                = '${bus.manufacturer}',
+              model                    = '${bus.model}',
+              rok_produkcji            = ${bus.year},
+              nr_rejestracyjny         = '${bus.registration}',
+              niska_podloga            = ${boolToInt(bus.lowBed)},
+              zapowiadanie_przystankow = ${boolToInt(bus.sound)},
+              tablice_elektroniczne    = ${boolToInt(bus.lcdPanels)},
+              cieple_guziki            = ${boolToInt(bus.doorButtons)},
+              monitoring               = ${boolToInt(bus.cctv)},
+              biletomat                = ${boolToInt(bus.tickets)},
+              klimatyzacja             = ${boolToInt(bus.climateControl)}
+          WHERE nr_pojazdu = ${bus.id};
+      END;`
+    )
 
-      console.log('Inserted bus', index)
-    })
+    await connection.commit()
   } catch (err) {
     console.error(err)
   } finally {
     if (connection) {
       try {
-        await connection.commit()
         await connection.close()
       } catch (err) {
         console.error(err)
       }
     }
   }
-
-  return new Promise((resolve) => resolve);
 }
