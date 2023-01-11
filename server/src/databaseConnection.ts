@@ -10,7 +10,7 @@ async function databaseConnect() {
   return await oracledb.getConnection({
     user: 'kw438800',
     password: oraclePassword,
-    connectionString: 'https://labora.mimuw.edu.pl/LABS'
+    connectionString: 'labora.mimuw.edu.pl/LABS'
   })
 }
 
@@ -32,14 +32,14 @@ export async function databaseInit() {
         model VARCHAR(100) NOT NULL,
         rok_produkcji INT NOT NULL,
         nr_rejestracyjny VARCHAR(7) NOT NULL,
-        niska_podloga BOOL NOT NULL,
-        zapowiadanie_przystankow BOOL NOT NULL,
-        tablice_elektroniczne BOOL NOT NULL,
-        cieple_guziki BOOL NOT NULL,
-        monitoring BOOL NOT NULL,
-        biletomat BOOL NOT NULL,
-        klimatyzacja BOOL NOT NULL
-      );`
+        niska_podloga NUMBER(1) NOT NULL,
+        zapowiadanie_przystankow NUMBER(1) NOT NULL,
+        tablice_elektroniczne NUMBER(1) NOT NULL,
+        cieple_guziki NUMBER(1) NOT NULL,
+        monitoring NUMBER(1) NOT NULL,
+        biletomat NUMBER(1) NOT NULL,
+        klimatyzacja NUMBER(1) NOT NULL
+      )`
     )
 
     await connection.execute(
@@ -47,11 +47,11 @@ export async function databaseInit() {
         id INT PRIMARY KEY,
         linia VARCHAR(5) NOT NULL,
         autobus NOT NULL REFERENCES Autobus,
-        start DATETIME NOT NULL,
-        koniec DATETIME,
-        aktualna_pozycja_x DOUBLE(9, 7) NOT NULL,
-        aktualna_pozycja_y DOUBLE(9, 7) NOT NULL
-      );`
+        czas_start TIMESTAMP NOT NULL,
+        czas_koniec TIMESTAMP,
+        aktualna_pozycja_x DOUBLE PRECISION NOT NULL,
+        aktualna_pozycja_y DOUBLE PRECISION NOT NULL
+      )`
     )
   } catch (err) {
     console.error(err)
@@ -93,40 +93,46 @@ export async function databaseExecute(query: string) : Promise<Result<unknown>> 
   }
 }
 
+function boolToInt(bool: Boolean): number {
+  return bool ? 1 : 0
+}
+
 export async function databaseInsertOrUpdateBuses(buses: Bus[]) {
   let connection: oracledb.Connection
 
   try {
+    console.log('here1')
     connection = await databaseConnect()
+    console.log('here2')
 
     buses.forEach((bus, index) => {
       connection.execute(
         `BEGIN
           INSERT INTO Autobus VALUES (
             ${bus.id},
-            ${bus.owner},
-            ${bus.depot},
-            ${bus.manufacturer},
-            ${bus.model},
+            '${bus.owner}',
+            '${bus.depot}',
+            '${bus.manufacturer}',
+            '${bus.model}',
             ${bus.year},
-            ${bus.registration},
-            ${bus.lowBed},
-            ${bus.sound},
-            ${bus.lcdPanels},
-            ${bus.doorButtons},
-            ${bus.cctv},
-            ${bus.tickets},
-            ${bus.climateControl}
+            '${bus.registration}',
+            ${boolToInt(bus.lowBed)},
+            ${boolToInt(bus.sound)},
+            ${boolToInt(bus.lcdPanels)},
+            ${boolToInt(bus.doorButtons)},
+            ${boolToInt(bus.cctv)},
+            ${boolToInt(bus.tickets)},
+            ${boolToInt(bus.climateControl)}
           );
         EXCEPTION
           WHEN DUP_VAL_ON_INDEX THEN
-            UPDATE mytable
-            SET przewoznik               = ${bus.owner},
-                zajezdnia                = ${bus.depot},
-                producent                = ${bus.manufacturer},
-                model                    = ${bus.model},
+            UPDATE Autobus
+            SET przewoznik               = '${bus.owner}',
+                zajezdnia                = '${bus.depot}',
+                producent                = '${bus.manufacturer}',
+                model                    = '${bus.model}',
                 rok_produkcji            = ${bus.year},
-                nr_rejestracyjny         = ${bus.registration},
+                nr_rejestracyjny         = '${bus.registration}',
                 niska_podloga            = ${bus.lowBed},
                 zapowiadanie_przystankow = ${bus.sound},
                 tablice_elektroniczne    = ${bus.lcdPanels},
@@ -151,4 +157,6 @@ export async function databaseInsertOrUpdateBuses(buses: Bus[]) {
       }
     }
   }
+
+  return new Promise((resolve) => resolve);
 }
