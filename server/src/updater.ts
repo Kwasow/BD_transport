@@ -1,6 +1,6 @@
-import fs from 'fs'
 import cheerio from "cheerio"
 import rp from "request-promise"
+import { databaseInsertOrUpdateBuses } from "./databaseConnection"
 
 const apiKey = "7ee8dab5-1fa9-4baa-bc9a-44e053b87edf"
 const requestURL = "https://api.um.warszawa.pl/api/action/busestrams_get/?resource_id=f2e5503e-927d-4ad3-9500-4ab9e55deb59&limit=5&apikey="
@@ -9,12 +9,12 @@ const requestURL = "https://api.um.warszawa.pl/api/action/busestrams_get/?resour
 const busBankURL_start = "https://www.ztm.waw.pl/baza-danych-pojazdow/page/"
 const busBankURL_end = "/?ztm_traction=1&ztm_make&ztm_model&ztm_year&ztm_registration&ztm_vehicle_number&ztm_carrier&ztm_depot"
 
-type Bus = {
+export type Bus = {
+  id: number,
   manufacturer: string,
   model: string,
   year: number,
   registration: string,
-  id: number,
   owner: string,
   depot: string,
 
@@ -28,20 +28,21 @@ type Bus = {
 }
 
 async function getNumberOfBusPages(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    rp(busBankURL_start + 1 + busBankURL_end)
-      .then((html => {
-        const $ = cheerio.load(html);
-        const list = $("div.grid-pager > nav > ul > li > a").map((i, x) => $(x).attr("href")).toArray()
+  // return new Promise((resolve, reject) => {
+  //   rp(busBankURL_start + 1 + busBankURL_end)
+  //     .then((html => {
+  //       const $ = cheerio.load(html);
+  //       const list = $("div.grid-pager > nav > ul > li > a").map((i, x) => $(x).attr("href")).toArray()
 
-        list.sort((a, b) => a.localeCompare(b))
+  //       list.sort((a, b) => a.localeCompare(b))
 
-        const pageNumberPattern = /\d+/g
+  //       const pageNumberPattern = /\d+/g
 
-        resolve(parseInt(list[list.length - 1].match(pageNumberPattern)[0]))
-      }))
-      .catch((err) => reject(err))
-  });
+  //       resolve(parseInt(list[list.length - 1].match(pageNumberPattern)[0]))
+  //     }))
+  //     .catch((err) => reject(err))
+  // });
+  return new Promise((resolve) => resolve(1))
 }
 
 async function getBusesOnPage(url: string): Promise<string[]> {
@@ -127,8 +128,7 @@ async function getBuses() : Promise<Bus[]> {
             .then(() => {
               return getBus(link)
                 .then((bus) => {
-                  console.log("Got bus: ", i + 1)
-                  console.log(bus)
+                  console.log("Got bus: ", i)
                   return bus;
               })
             })
@@ -142,11 +142,15 @@ async function getBuses() : Promise<Bus[]> {
   })
 }
 
-export function updateBuses() {
+export async function updateBuses() {  
   getBuses()
-  .then((res) => {
-    // Update database
-  })
+    .then((res) => {
+      databaseInsertOrUpdateBuses(res)
+    })
+    .catch((err) => {
+      console.error("Error getting buses")
+      console.error(err)
+    })
 }
 
 export function updatePositions() {
