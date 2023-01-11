@@ -28,21 +28,20 @@ export type Bus = {
 }
 
 async function getNumberOfBusPages(): Promise<number> {
-  // return new Promise((resolve, reject) => {
-  //   rp(busBankURL_start + 1 + busBankURL_end)
-  //     .then((html => {
-  //       const $ = cheerio.load(html);
-  //       const list = $("div.grid-pager > nav > ul > li > a").map((i, x) => $(x).attr("href")).toArray()
+  return new Promise((resolve, reject) => {
+    rp(busBankURL_start + 1 + busBankURL_end)
+      .then((html => {
+        const $ = cheerio.load(html);
+        const list = $("div.grid-pager > nav > ul > li > a").map((i, x) => $(x).attr("href")).toArray()
 
-  //       list.sort((a, b) => a.localeCompare(b))
+        list.sort((a, b) => a.localeCompare(b))
 
-  //       const pageNumberPattern = /\d+/g
+        const pageNumberPattern = /\d+/g
 
-  //       resolve(parseInt(list[list.length - 1].match(pageNumberPattern)[0]))
-  //     }))
-  //     .catch((err) => reject(err))
-  // });
-  return new Promise((resolve) => resolve(1))
+        resolve(parseInt(list[list.length - 1].match(pageNumberPattern)[0]))
+      }))
+      .catch((err) => reject(err))
+  });
 }
 
 async function getBusesOnPage(url: string): Promise<string[]> {
