@@ -1,6 +1,8 @@
-import cheerio from "cheerio"
-import rp from "request-promise"
-import { databaseInsertOrUpdateBus } from "./databaseConnection"
+import cheerio from 'cheerio'
+import rp from 'request-promise'
+import { boolToInt, databaseConnect, databaseInsertOrUpdateBus } from './databaseConnection'
+import fs from 'fs'
+import oracledb from 'oracledb'
 
 const apiKey = "7ee8dab5-1fa9-4baa-bc9a-44e053b87edf"
 const requestURL = "https://api.um.warszawa.pl/api/action/busestrams_get/?resource_id=f2e5503e-927d-4ad3-9500-4ab9e55deb59&limit=5&apikey="
@@ -122,21 +124,87 @@ export async function updateBuses() {
   const links = await getBusLinks()
 
   let errorCount = 0;
+  const buses = new Array<Bus>()
   
-  for (let i = 780; i < links.length; i++) {
+  for (let i = 0; i < links.length; i++) {
     try {
       await timer(500)
       const bus = await getBus(links[i])
-      console.log("Got bus: ", bus.id)
-      await databaseInsertOrUpdateBus(bus)
-      console.log("Inserted bus: ", bus.id)
+      buses.push(bus)
     } catch {
-      console.error('Error getting bus')
+      console.error('Error getting bus; i =', i)
       errorCount++
     }
   }
 
+  fs.writeFileSync('buses.json', JSON.stringify(buses))
   console.error('Failed to get', errorCount, 'buses')
+}
+
+export async function updateBusesFromFile() {
+  const buses = JSON.parse(fs.readFileSync('buses.json', 'utf8'))
+
+  let connection: oracledb.Connection
+
+  try {
+    connection = await databaseConnect()
+
+    for (let i = 0; i < buses.length; i++) {
+      const bus = buses[i]
+  
+      await connection.execute(
+        `BEGIN
+          INSERT INTO Autobus VALUES (
+            ${bus.id},
+            '${bus.owner}',
+            '${bus.depot}',
+            '${bus.manufacturer}',
+            '${bus.model}',
+            ${bus.year},
+            '${bus.registration}',
+            ${boolToInt(bus.lowBed)},
+            ${boolToInt(bus.sound)},
+            ${boolToInt(bus.lcdPanels)},
+            ${boolToInt(bus.doorButtons)},
+            ${boolToInt(bus.cctv)},
+            ${boolToInt(bus.tickets)},
+            ${boolToInt(bus.climateControl)}
+          );
+        EXCEPTION
+          WHEN DUP_VAL_ON_INDEX THEN
+            UPDATE Autobus
+            SET przewoznik               = '${bus.owner}',
+                zajezdnia                = '${bus.depot}',
+                producent                = '${bus.manufacturer}',
+                model                    = '${bus.model}',
+                rok_produkcji            = ${bus.year},
+                nr_rejestracyjny         = '${bus.registration}',
+                niska_podloga            = ${boolToInt(bus.lowBed)},
+                zapowiadanie_przystankow = ${boolToInt(bus.sound)},
+                tablice_elektroniczne    = ${boolToInt(bus.lcdPanels)},
+                cieple_guziki            = ${boolToInt(bus.doorButtons)},
+                monitoring               = ${boolToInt(bus.cctv)},
+                biletomat                = ${boolToInt(bus.tickets)},
+                klimatyzacja             = ${boolToInt(bus.climateControl)}
+            WHERE nr_pojazdu = ${bus.id};
+        END;`
+      )
+    }
+  
+    connection.commit()
+    connection.close()
+    console.log('done')
+  } catch (err) {
+    console.error(err)
+  } finally {
+    if (connection) {
+      try {
+        await connection.close()
+      } catch (err) {
+        console.error(err)
+      }
+    }
+  }
 }
 
 export function updatePositions() {

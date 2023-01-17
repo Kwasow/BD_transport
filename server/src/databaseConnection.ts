@@ -6,7 +6,7 @@ import { Bus } from './updater'
 //  - Autobus
 //  - Przejazd
 
-async function databaseConnect() {
+export async function databaseConnect() {
   return await oracledb.getConnection({
     user: 'kw438800',
     password: oraclePassword,
@@ -93,7 +93,7 @@ export async function databaseExecute(query: string) : Promise<Result<unknown>> 
   }
 }
 
-function boolToInt(bool: Boolean): number {
+export function boolToInt(bool: Boolean): number {
   return bool ? 1 : 0
 }
 
@@ -121,24 +121,24 @@ export async function databaseInsertOrUpdateBus(bus: Bus) {
           ${boolToInt(bus.tickets)},
           ${boolToInt(bus.climateControl)}
         );
-      EXCEPTION
-        WHEN DUP_VAL_ON_INDEX THEN
-          UPDATE Autobus
-          SET przewoznik               = '${bus.owner}',
-              zajezdnia                = '${bus.depot}',
-              producent                = '${bus.manufacturer}',
-              model                    = '${bus.model}',
-              rok_produkcji            = ${bus.year},
-              nr_rejestracyjny         = '${bus.registration}',
-              niska_podloga            = ${boolToInt(bus.lowBed)},
-              zapowiadanie_przystankow = ${boolToInt(bus.sound)},
-              tablice_elektroniczne    = ${boolToInt(bus.lcdPanels)},
-              cieple_guziki            = ${boolToInt(bus.doorButtons)},
-              monitoring               = ${boolToInt(bus.cctv)},
-              biletomat                = ${boolToInt(bus.tickets)},
-              klimatyzacja             = ${boolToInt(bus.climateControl)}
-          WHERE nr_pojazdu = ${bus.id};
       END;`
+      // EXCEPTION
+      //   WHEN DUP_VAL_ON_INDEX THEN
+      //     UPDATE Autobus
+      //     SET przewoznik               = '${bus.owner}',
+      //         zajezdnia                = '${bus.depot}',
+      //         producent                = '${bus.manufacturer}',
+      //         model                    = '${bus.model}',
+      //         rok_produkcji            = ${bus.year},
+      //         nr_rejestracyjny         = '${bus.registration}',
+      //         niska_podloga            = ${boolToInt(bus.lowBed)},
+      //         zapowiadanie_przystankow = ${boolToInt(bus.sound)},
+      //         tablice_elektroniczne    = ${boolToInt(bus.lcdPanels)},
+      //         cieple_guziki            = ${boolToInt(bus.doorButtons)},
+      //         monitoring               = ${boolToInt(bus.cctv)},
+      //         biletomat                = ${boolToInt(bus.tickets)},
+      //         klimatyzacja             = ${boolToInt(bus.climateControl)}
+      //     WHERE nr_pojazdu = ${bus.id};
     )
 
     await connection.commit()
