@@ -1,6 +1,6 @@
 import cheerio from 'cheerio'
 import rp from 'request-promise'
-import { boolToInt, databaseConnect, databaseInsertOrUpdateBus } from './databaseConnection'
+import { boolToInt, databaseConnect } from './databaseConnection'
 import fs from 'fs'
 import oracledb from 'oracledb'
 
@@ -27,6 +27,19 @@ export type Bus = {
   lcdPanels: Boolean,
   doorButtons: Boolean,
   cctv: Boolean,
+}
+
+type RideJSON = {
+  Lines: string,
+  Lon: string,
+  VehicleNumber: string,
+  Time: string,
+  Lat: string,
+  Brigade: string
+}
+
+type RideAPIResult = {
+  result: RideJSON[]
 }
 
 async function getNumberOfBusPages(): Promise<number> {
@@ -192,7 +205,6 @@ export async function updateBusesFromFile() {
     }
   
     connection.commit()
-    connection.close()
     console.log('done')
   } catch (err) {
     console.error(err)
@@ -207,6 +219,50 @@ export async function updateBusesFromFile() {
   }
 }
 
-export function updatePositions() {
-  console.error("updatePositions(): NOT IMPLEMENTED");
+export async function updatePositions() {
+  const rides: RideJSON[] = await fetch(requestURL)
+    .then((res) => res.json())
+    .then((res: RideAPIResult) => res.result)
+    .catch((err) => {
+      console.error(err)
+      console.error("Failed getting bus positions")
+      return []
+    })
+  
+  if (rides.length == 0) {
+    return;
+  }
+
+  let connection: oracledb.Connection
+
+  try {
+    connection = await databaseConnect()
+
+    // Get all unfinished rides
+    const result = await connection.execute(
+      `SELECT * FROM Przejazd WHERE czas_koniec IS NULL`
+    )
+
+    // For each check if it is in rides array
+    for (let i = 0; i < result.length; i++) {
+      console.log(result[i])
+      // End if necessary
+    }
+
+    for (let i = 0; i < rides.length; i++) {
+      // Insert new or update
+    }
+
+    connection.commit()
+  } catch (err) {
+    console.error(err)
+  } finally {
+    if (connection) {
+      try {
+        await connection.close()
+      } catch (err) {
+        console.error(err)
+      }
+    }
+  }
 }
