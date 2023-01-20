@@ -233,7 +233,9 @@ export async function updatePositions() {
       console.error("Failed getting bus positions")
       return []
     })
-  
+
+  console.log('Active buses:', rides.length)
+
   if (rides.length == 0) {
     return;
   }
