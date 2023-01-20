@@ -13,10 +13,8 @@ async function updateEveryMinute() {
 }
 
 async function main() {
-  // startServer()
+  startServer()
   await databaseInit()
-  // await updateBuses()
-  // await updateBusesFromFile()
 
   // Setup cron jobs
   // Run daily at 2:07 AM
