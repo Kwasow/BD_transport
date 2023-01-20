@@ -17,7 +17,7 @@
   $conn = oci_connect("kw438800", $passowrd, "//labora.mimuw.edu.pl/LABS");
   if (!$conn) {
     http_response_code(500);
-    echo '{code: 500, info: \'internal server error\'}';
+    echo '{"code": 500, "info": "internal server error"}';
     exit();
   }
 
@@ -34,11 +34,11 @@
       echo ',';
     }
 
-    $row['PRZEWOZNIK'] = str_replace('"', '\'', $row['PRZEWOZNIK']);
+    $row['PRZEWOZNIK'] = str_replace('"', '\"', $row['PRZEWOZNIK']);
     $row['ZAJEZDNIA'] = str_replace('"', '\"', $row['ZAJEZDNIA']);
-    $row['PRODUCENT'] = str_replace('"', '\'', $row['PRODUCENT']);
-    $row['MODEL'] = str_replace('"', '\'', $row['MODEL']);
-    $row['NR_REJESTRACYJNY'] = str_replace('"', '\'', $row['NR_REJESTRACYJNY']);
+    $row['PRODUCENT'] = str_replace('"', '\"', $row['PRODUCENT']);
+    $row['MODEL'] = str_replace('"', '\"', $row['MODEL']);
+    $row['NR_REJESTRACYJNY'] = str_replace('"', '\"', $row['NR_REJESTRACYJNY']);
 
     echo '{';
     echo '  "nr_pojazdu":'.$row['NR_POJAZDU'].',';

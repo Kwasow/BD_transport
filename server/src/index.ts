@@ -1,5 +1,4 @@
 import { databaseInit } from './databaseConnection'
-import { startServer } from './server'
 import { updateBuses, updateBusesFromFile, updatePositions } from './updater'
 import cron from 'node-cron'
 
@@ -13,7 +12,6 @@ async function updateEveryMinute() {
 }
 
 async function main() {
-  startServer()
   await databaseInit()
 
   // Setup cron jobs
