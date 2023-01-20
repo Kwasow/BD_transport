@@ -246,7 +246,7 @@ export async function updatePositions() {
       `SELECT MAX(id) FROM Przejazd`
     )
 
-    let nextId: number = nextIdResponse.rows[0][0] || 0
+    let nextId: number = nextIdResponse.rows[0][0] + 1 || 0
 
     // Get all unfinished rides
     const rowsResponse = await connection.execute(
@@ -265,15 +265,16 @@ export async function updatePositions() {
       let found = false
 
       for (let j = 0; j < rows.length; j++) {
-        if (rows[j][2] === rides[i].VehicleNumber) {
+        if (rows[j][2] === Number(rides[i].VehicleNumber)) {
           unhandledRows.delete(j);
           if (rows[j][1] !== rides[i].Lines) {
-            // END and INSERT new, because line changed
+            // END because line changed
             await connection.execute(
               `UPDATE Przejazd
-              SET czas_koniec = ${(new Date()).toString().substring(0, 16)}
-              WHERE autobus = ${rides[i].VehicleNumber}`
+              SET czas_koniec = '${(new Date()).toISOString().substring(0, 16)}'
+              WHERE id = ${rows[j][0]}`
             )
+            // We'll add a new entry later, because found is false
             break;
       	  } else {
             // UPDATE positions
@@ -282,22 +283,23 @@ export async function updatePositions() {
               `UPDATE Przejazd
               SET aktualna_pozycja_x = ${rides[i].Lon},
                   aktualna_pozycja_y = ${rides[i].Lat}
-              WHERE autobus = ${rides[i].VehicleNumber}
-                AND linia   = ${rides[i].Lines}`
+              WHERE id = ${rows[j][0]}`
             )
+            break;
           }
       	}
       }
 
 
       if (!found) {
+        console.log('not found')
         // ADD
         await connection.execute(
           `INSERT INTO Przejazd VALUES (
             ${nextId++},
             '${rides[i].Lines}',
             ${rides[i].VehicleNumber},
-            '${(new Date()).toString().substring(0, 16)}',
+            '${(new Date()).toISOString().substring(0, 16)}',
             NULL,
             ${rides[i].Lon},
             ${rides[i].Lat}
@@ -308,12 +310,13 @@ export async function updatePositions() {
 
     // END unhandled rows
     const unhandled = Array.from(unhandledRows.values())
+    console.log('unhandled:', unhandled.length)
 
     for (let i = 0; i < unhandled.length; i++) {
       await connection.execute(
         `UPDATE Przejazd
-        SET czas_koniec = ${(new Date()).toString().substring(0, 16)}
-        WHERE autobus = ${unhandled[i][2]}`
+        SET czas_koniec = '${(new Date()).toISOString().substring(0, 16)}'
+        WHERE id = ${rows[i][0]}`
       )
     }
     
