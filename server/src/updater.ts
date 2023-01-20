@@ -135,6 +135,7 @@ async function getBus(url): Promise<Bus> {
 const timer = (ms) => new Promise(res => setTimeout(res, ms))
 
 export async function updateBuses() {  
+  console.log('Updating buses')
   const links = await getBusLinks()
 
   let errorCount = 0;
@@ -222,7 +223,7 @@ export async function updateBusesFromFile() {
 }
 
 export async function updatePositions() {
-  console.log('Updating positions')
+  console.log('Updating positions', (new Date).toISOString())
 
   const rides: RideJSON[] = await fetch(requestURL)
     .then((res) => res.json())
@@ -292,7 +293,6 @@ export async function updatePositions() {
 
 
       if (!found) {
-        console.log('not found')
         // ADD
         await connection.execute(
           `INSERT INTO Przejazd VALUES (
@@ -310,7 +310,6 @@ export async function updatePositions() {
 
     // END unhandled rows
     const unhandled = Array.from(unhandledRows.values())
-    console.log('unhandled:', unhandled.length)
 
     for (let i = 0; i < unhandled.length; i++) {
       await connection.execute(
