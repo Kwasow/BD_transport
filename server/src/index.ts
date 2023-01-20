@@ -2,13 +2,13 @@ import { databaseInit } from './databaseConnection'
 import { startServer } from './server'
 import { updateBuses, updateBusesFromFile, updatePositions } from './updater'
 
-startServer()
+// startServer()
 
 async function main() {
   await databaseInit()
-  // updateBuses() 
-  // updateBusesFromFile()
-  updatePositions();
+  // await updateBuses()
+  // await updateBusesFromFile()
+  await updatePositions();
 }
 
 main()

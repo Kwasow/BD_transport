@@ -3,6 +3,7 @@ import rp from 'request-promise'
 import { boolToInt, databaseConnect } from './databaseConnection'
 import fs from 'fs'
 import oracledb from 'oracledb'
+import fetch from 'node-fetch'
 
 const apiKey = "7ee8dab5-1fa9-4baa-bc9a-44e053b87edf"
 const requestURL = "https://api.um.warszawa.pl/api/action/busestrams_get/?resource_id=f2e5503e-927d-4ad3-9500-4ab9e55deb59&limit=5&apikey="
@@ -104,7 +105,7 @@ async function getBus(url): Promise<Bus> {
         
         const list = $("div.vehicle-details-entry-value").map((i, x) => {
           const tmp: any = $(x.children).first()[0]
-          return tmp.data
+          return tmp === undefined ? '' : tmp.data
         }).toArray()
 
         const bus: Bus = {
@@ -143,6 +144,7 @@ export async function updateBuses() {
     try {
       await timer(500)
       const bus = await getBus(links[i])
+      console.log('Got bus id:', bus.id)
       buses.push(bus)
     } catch {
       console.error('Error getting bus; i =', i)
@@ -220,6 +222,8 @@ export async function updateBusesFromFile() {
 }
 
 export async function updatePositions() {
+  console.log('Updating positions')
+
   const rides: RideJSON[] = await fetch(requestURL)
     .then((res) => res.json())
     .then((res: RideAPIResult) => res.result)
@@ -238,21 +242,81 @@ export async function updatePositions() {
   try {
     connection = await databaseConnect()
 
+    const nextIdResponse = await connection.execute(
+      `SELECT MAX(id) FROM Przejazd`
+    )
+
+    let nextId: number = nextIdResponse.rows[0][0] || 0
+
     // Get all unfinished rides
-    const result = await connection.execute(
+    const rowsResponse = await connection.execute(
       `SELECT * FROM Przejazd WHERE czas_koniec IS NULL`
     )
 
+    const rows = rowsResponse.rows
+
+    const unhandledRows = new Set<number>()
+    for (let i = 0; i < rows.length; i++) {
+      unhandledRows.add(i);
+    }
+
     // For each check if it is in rides array
-    for (let i = 0; i < result.length; i++) {
-      console.log(result[i])
-      // End if necessary
-    }
-
     for (let i = 0; i < rides.length; i++) {
-      // Insert new or update
+      let found = false
+
+      for (let j = 0; j < rows.length; j++) {
+        if (rows[j][2] === rides[i].VehicleNumber) {
+          unhandledRows.delete(j);
+          if (rows[j][1] !== rides[i].Lines) {
+            // END and INSERT new, because line changed
+            await connection.execute(
+              `UPDATE Przejazd
+              SET czas_koniec = ${(new Date()).toString().substring(0, 16)}
+              WHERE autobus = ${rides[i].VehicleNumber}`
+            )
+            break;
+      	  } else {
+            // UPDATE positions
+            found = true;
+            await connection.execute(
+              `UPDATE Przejazd
+              SET aktualna_pozycja_x = ${rides[i].Lon},
+                  aktualna_pozycja_y = ${rides[i].Lat}
+              WHERE autobus = ${rides[i].VehicleNumber}
+                AND linia   = ${rides[i].Lines}`
+            )
+          }
+      	}
+      }
+
+
+      if (!found) {
+        // ADD
+        await connection.execute(
+          `INSERT INTO Przejazd VALUES (
+            ${nextId++},
+            '${rides[i].Lines}',
+            ${rides[i].VehicleNumber},
+            '${(new Date()).toString().substring(0, 16)}',
+            NULL,
+            ${rides[i].Lon},
+            ${rides[i].Lat}
+          )`
+        )
+      }
     }
 
+    // END unhandled rows
+    const unhandled = Array.from(unhandledRows.values())
+
+    for (let i = 0; i < unhandled.length; i++) {
+      await connection.execute(
+        `UPDATE Przejazd
+        SET czas_koniec = ${(new Date()).toString().substring(0, 16)}
+        WHERE autobus = ${unhandled[i][2]}`
+      )
+    }
+    
     connection.commit()
   } catch (err) {
     console.error(err)
