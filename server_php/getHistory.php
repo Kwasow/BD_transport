@@ -34,6 +34,9 @@
       echo ',';
     }
 
+    $row['AKTUALNA_POZYCJA_X'] = str_replace(',', '.', $row['AKTUALNA_POZYCJA_X']);
+    $row['AKTUALNA_POZYCJA_Y'] = str_replace(',', '.', $row['AKTUALNA_POZYCJA_Y']);
+
     echo '{';
     echo '  "linia":"'.$row['LINIA'].'",';
     echo '  "autobus":"'.$row['AUTOBUS'].'",';
