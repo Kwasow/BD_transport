@@ -18,7 +18,7 @@ async function main() {
   // Run daily at 2:07 AM
   cron.schedule('7 2 * * *', updateEveryDay)
   // Run every 30 seconds
-  cron.schedule('*/20  * * * * *', updateEveryMinute)
+  cron.schedule('*/10  * * * * *', updateEveryMinute)
 }
 
 main()

@@ -268,13 +268,13 @@ export async function updatePositions() {
       let found = false
 
       for (let j = 0; j < rows.length; j++) {
-        if (rows[j][2] === Number(rides[i].VehicleNumber)) {
+        if (rows[j][3] === Number(rides[i].VehicleNumber)) {
           unhandledRows.delete(j);
-          if (rows[j][1] !== rides[i].Lines) {
-            // END because line changed
+          if (rows[j][1] !== rides[i].Lines || rows[j][2] !== rides[i].Brigade) {
+            // END because line or brigade number changed
             await connection.execute(
               `UPDATE Przejazd
-              SET czas_koniec = '${(new Date()).toISOString().substring(0, 16)}'
+              SET czas_koniec = '${rows[j][5]}'
               WHERE id = ${rows[j][0]}`
             )
             // We'll add a new entry later, because found is false
@@ -284,7 +284,8 @@ export async function updatePositions() {
             found = true;
             await connection.execute(
               `UPDATE Przejazd
-              SET aktualna_pozycja_x = ${rides[i].Lon},
+              SET ostatnio_widziany = ${(new Date()).toISOString().substring(0, 16)},
+                  aktualna_pozycja_x = ${rides[i].Lon},
                   aktualna_pozycja_y = ${rides[i].Lat}
               WHERE id = ${rows[j][0]}`
             )
@@ -300,7 +301,9 @@ export async function updatePositions() {
           `INSERT INTO Przejazd VALUES (
             ${nextId++},
             '${rides[i].Lines}',
+            '${rides[i].Brigade}',
             ${rides[i].VehicleNumber},
+            '${(new Date()).toISOString().substring(0, 16)}',
             '${(new Date()).toISOString().substring(0, 16)}',
             NULL,
             ${rides[i].Lon},
@@ -314,11 +317,14 @@ export async function updatePositions() {
     const unhandled = Array.from(unhandledRows.values())
 
     for (let i = 0; i < unhandled.length; i++) {
-      await connection.execute(
-        `UPDATE Przejazd
-        SET czas_koniec = '${(new Date()).toISOString().substring(0, 16)}'
-        WHERE id = ${rows[i][0]}`
-      )
+      // We allow the bus to be unseen for up to 10 minutes
+      if (Date.now() - Date.parse(rows[i][5]) >= 600000) {
+        await connection.execute(
+          `UPDATE Przejazd
+          SET czas_koniec = '${(new Date()).toISOString().substring(0, 16)}'
+          WHERE id = ${rows[i][0]}`
+        )
+      }
     }
     
     connection.commit()
