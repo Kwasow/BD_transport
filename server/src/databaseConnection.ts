@@ -51,7 +51,7 @@ export async function databaseInit() {
         `CREATE TABLE Przejazd (
           id INT PRIMARY KEY,
           linia VARCHAR(5) NOT NULL,
-          nr_brygady VARCHAR(4) NOT NULL,
+          nr_brygady INT NOT NULL,
           autobus NOT NULL REFERENCES Autobus,
           czas_start VARCHAR(16) NOT NULL,
           ostatnio_widziany VARCHAR(16) NOT NULL,
