@@ -270,7 +270,7 @@ export async function updatePositions() {
       for (let j = 0; j < rows.length; j++) {
         if (rows[j][3] === Number(rides[i].VehicleNumber)) {
           unhandledRows.delete(j);
-          if (rows[j][1] !== rides[i].Lines || rows[j][2] !== rides[i].Brigade) {
+          if (rows[j][1] != rides[i].Lines || Number(rows[j][2]) !== Number(rides[i].Brigade)) {
             // END because line or brigade number changed
             await connection.execute(
               `UPDATE Przejazd
@@ -284,7 +284,7 @@ export async function updatePositions() {
             found = true;
             await connection.execute(
               `UPDATE Przejazd
-              SET ostatnio_widziany = ${(new Date()).toISOString().substring(0, 16)},
+              SET ostatnio_widziany = '${(new Date()).toISOString().substring(0, 16)}',
                   aktualna_pozycja_x = ${rides[i].Lon},
                   aktualna_pozycja_y = ${rides[i].Lat}
               WHERE id = ${rows[j][0]}`
@@ -321,7 +321,7 @@ export async function updatePositions() {
       if (Date.now() - Date.parse(rows[i][5]) >= 600000) {
         await connection.execute(
           `UPDATE Przejazd
-          SET czas_koniec = '${(new Date()).toISOString().substring(0, 16)}'
+          SET czas_koniec = '${rows[i][5]}'
           WHERE id = ${rows[i][0]}`
         )
       }
