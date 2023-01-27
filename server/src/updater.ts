@@ -263,6 +263,9 @@ export async function updatePositions() {
       unhandledRows.add(i);
     }
 
+    const nowString = (new Date()).toISOString().substring(0, 16)
+    const nowMs = Date.parse(nowString)
+
     // For each check if it is in rides array
     for (let i = 0; i < rides.length; i++) {
       let found = false
@@ -284,7 +287,7 @@ export async function updatePositions() {
             found = true;
             await connection.execute(
               `UPDATE Przejazd
-              SET ostatnio_widziany = '${(new Date()).toISOString().substring(0, 16)}',
+              SET ostatnio_widziany = '${nowString}',
                   aktualna_pozycja_x = ${rides[i].Lon},
                   aktualna_pozycja_y = ${rides[i].Lat}
               WHERE id = ${rows[j][0]}`
@@ -303,8 +306,8 @@ export async function updatePositions() {
             '${rides[i].Lines}',
             ${Number(rides[i].Brigade)},
             ${rides[i].VehicleNumber},
-            '${(new Date()).toISOString().substring(0, 16)}',
-            '${(new Date()).toISOString().substring(0, 16)}',
+            '${nowString}',
+            '${nowString}',
             NULL,
             ${rides[i].Lon},
             ${rides[i].Lat}
@@ -318,9 +321,7 @@ export async function updatePositions() {
 
     for (let i = 0; i < unhandled.length; i++) {
       // We allow the bus to be unseen for up to 10 minutes
-      if (Date.now() - Date.parse(rows[i][5]) >= 600000) {
-        console.log('Not found and ended:', rows[i][1], rows[i][3])
-
+      if (nowMs - Date.parse(rows[i][5]) >= 600000) {
         await connection.execute(
           `UPDATE Przejazd
           SET czas_koniec = '${rows[i][5]}'
